@@ -1,0 +1,26 @@
+{
+    "sft_bleu": {
+        "score": 0.459,
+        "model_path": "./models/sft_final"
+    },
+    "dpo_bleu": {
+        "score": 0.4584,
+        "model_path": "./models/dpo_final"
+    },
+    "grpo_completions_4_bleu": {
+        "score": 0.4593,
+        "model_path": "./models/grpo_completions_4"
+    },
+    "grpo_completions_8_bleu": {
+        "score": 0.46,
+        "model_path": "./models/grpo_completions_8"
+    },
+    "grpo_completions_12_bleu": {
+        "score": 0.4631,
+        "model_path": "./models/grpo_completions_12"
+    },
+    "grpo_completions_16_bleu": {
+        "score": 0.4669,
+        "model_path": "./models/grpo_completions_16"
+    }
+}

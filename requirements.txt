@@ -1,0 +1,17 @@
+# Core ML Libraries
+torch>=2.1.0
+transformers>=4.41.0
+trl>=0.8.6
+datasets>=2.15.0
+accelerate>=0.25.0
+
+# Evaluation & Metrics
+evaluate
+sacrebleu
+fast_edit_distance
+
+# Utilities
+pandas
+matplotlib
+numpy
+jupyter
