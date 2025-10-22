@@ -20,19 +20,22 @@ This project demonstrates **preference optimization techniques** for grammatical
 
 ## 🏆 Key Results
 
-| Method | BLEU Score | Improvement over SFT |
-|--------|------------|---------------------|
-| **GRPO (c=16)** | **0.4669** | **+1.7%** ✨ |
-| SFT (Baseline) | 0.4590 | - |
-| DPO | 0.4584 | -0.1% |
+| Method | BLEU Score |
+|--------|------------|
+| GRPO (c=16) | 0.4669
+| GRPO (c=12) | 0.4631
+| GRPO (c=8) | 0.4600
+| GRPO (c=4) | 0.4593
+| SFT (Fine-tuned) | 0.4590
+| DPO | 0.4584
+| Zero-Shot (Base LM) | 0.1501
 
 ### Main Findings
 
-- ✅ **GRPO outperforms** both SFT and DPO on BLEU metric
-- ✅ **Group size matters**: Increasing from 4→8→12→16 completions consistently improved performance
-- ✅ **Online learning** (GRPO) adapts better than offline (DPO) for this task
-- ✅ **Incremental gains**: The +1.7% BLEU improvement indicates modest but consistent progress
-
+- ✅ **Significant Improvement Over Base:** Fine-tuning (SFT) yielded a massive **+205%** relative BLEU improvement over the zero-shot base model (0.1501 → 0.4590), demonstrating the effectiveness of task-specific training.
+- ✅ **GRPO Outperforms:** GRPO further improved performance, achieving the highest BLEU score (0.4669), slightly surpassing both SFT and DPO.
+- ✅ **Group Size Matters:** Increasing the GRPO group size from 4→8→12→16 consistently improved performance, suggesting a larger group provides a more stable training signal.
+- ✅ **Preference Tuning Nuance:** While DPO didn't improve BLEU, qualitative analysis shows preference tuning can refine outputs in ways not captured by n-gram metrics.
 ---
 
 ## 🔬 Methods Compared
