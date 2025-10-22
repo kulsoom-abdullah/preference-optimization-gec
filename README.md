@@ -37,6 +37,19 @@ This project demonstrates **preference optimization techniques** for grammatical
 - ✅ **Group Size Matters:** Increasing the GRPO group size from 4→8→12→16 consistently improved performance, suggesting a larger group provides a more stable training signal.
 - ✅ **Preference Tuning Nuance:** While DPO didn't improve BLEU, qualitative analysis shows preference tuning can refine outputs in ways not captured by n-gram metrics.
 ---
+## 🌐 Real-World Context
+
+These alignment techniques power production LLMs:
+- **ChatGPT, Claude, Gemini** use RLHF/RLAIF to align models with human preferences
+- **Preference optimization** (DPO/GRPO) is increasingly replacing traditional RLHF due to simpler implementation and comparable results
+- **Online methods** like GRPO are used when models need to adapt during training (e.g., coding assistants, math reasoning)
+- **Offline methods** like DPO work well when you have high-quality preference datasets (e.g., instruction following)
+
+This project demonstrates these production techniques at an educational scale, systematically comparing their tradeoffs to understand when each approach excels.
+
+**Why this matters:** As LLMs scale to billions of parameters, understanding the efficiency and effectiveness of different alignment approaches becomes critical for resource allocation and model performance.
+
+---
 
 ## 🔬 Methods Compared
 
