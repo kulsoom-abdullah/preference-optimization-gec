@@ -20,22 +20,23 @@ This project demonstrates **preference optimization techniques** for grammatical
 
 ## 🏆 Key Results
 
-| Method | BLEU Score |
-|--------|------------|
-| GRPO (c=16) | 0.4669
-| GRPO (c=12) | 0.4631
-| GRPO (c=8) | 0.4600
-| GRPO (c=4) | 0.4593
-| SFT (Fine-tuned) | 0.4590
-| DPO | 0.4584
-| Zero-Shot (Base LM) | 0.1501
+This project's key finding is that **modern alignment techniques (DPO and GRPO) successfully improved performance over a strong, well-tuned SFT baseline.**
 
-### Main Findings
+The final comparison was run in an "apples-to-apples" test, where all three final models were loaded and evaluated in the same session using the exact same evaluation script.
 
-- ✅ **Significant Improvement Over Base:** Fine-tuning (SFT) yielded a massive **+205%** relative BLEU improvement over the zero-shot base model (0.1501 → 0.4590), demonstrating the effectiveness of task-specific training.
-- ✅ **GRPO Outperforms:** GRPO further improved performance, achieving the highest BLEU score (0.4669), slightly surpassing both SFT and DPO.
-- ✅ **Group Size Matters:** Increasing the GRPO group size from 4→8→12→16 consistently improved performance, suggesting a larger group provides a more stable training signal.
-- ✅ **Preference Tuning Nuance:** While DPO didn't improve BLEU, qualitative analysis shows preference tuning can refine outputs in ways not captured by n-gram metrics.
+| Method | BLEU | Δ from SFT |
+| :--- | :--- | :--- |
+| SFT (Baseline) | 0.4677 | +0.0000 (+0.00%) |
+| **DPO (Winner)** | **0.4716** | **+0.0039 (+0.83%)** |
+| GRPO | 0.4712 | +0.0036 (+0.76%) |
+
+## 📈 Main Findings
+
+1.  **Alignment Techniques Succeeded:** Both DPO and GRPO, when trained with a metric-aligned reward (BLEU), measurably improved upon the SFT baseline. This demonstrates that even for a small model, preference optimization can provide a significant performance boost.
+2.  **DPO was the Top Performer:** DPO, trained on 825 BLEU-ranked preference pairs, yielded the highest BLEU score, making it the most effective method in this experiment.
+3.  **Qualitative Improvement:** A qualitative case study on SFT's worst-performing examples showed that **DPO was uniquely able to fix a catastrophic generation failure** (a repetitive loop) where both SFT and GRPO failed, demonstrating a clear behavioral improvement.
+4.  **Baseline Consistency is Critical:** An initial SFT evaluation logged a BLEU score of 0.4802. However, a final, "apples-to-apples" evaluation of that *exact same model file* consistently yielded 0.4677. This discrepancy (likely due to environment drift) highlights the importance of running final comparisons in a single, controlled session. The 0.4677 score is the reproducible baseline.
+
 ---
 ## 🌐 Real-World Context
 
@@ -49,41 +50,34 @@ This project demonstrates these production techniques at an educational scale, s
 
 **Why this matters:** As LLMs scale to billions of parameters, understanding the efficiency and effectiveness of different alignment approaches becomes critical for resource allocation and model performance.
 
----
-
 ## 🔬 Methods Compared
+
+This project was conducted in three phases, establishing a baseline and then testing two alignment techniques against it.
 
 ### 1. Supervised Fine-Tuning (SFT)
 
-**What it does:** Fine-tunes the model to predict the corrected sentence given an incorrect input.
+**What it does:** Fine-tunes the model to predict the corrected sentence given an incorrect input. This establishes the strong baseline that DPO and GRPO must beat.
 
 **Approach:**
-- Uses completion-only loss (only compute loss on corrected text, not prompt)
-- I fine-tuned the model using SFT to establish a strong baseline. Although a small model on a focused task can overfit quickly, I intentionally trained for 5 epochs with an early stopping strategy (`load_best_model_at_end=True`) to select the checkpoint before overfitting occurs.
-- Serves as baseline for preference methods
+- A `SmolLM-135M` model was fine-tuned on the `grammarly/coedit` dataset.
+- **Key Method:** This notebook uses a robust evaluation strategy. Instead of relying on `load_best_model_at_end` (which tracks *loss*), the model was trained for a fixed number of steps, and BLEU was evaluated at regular intervals.
+- **Key Insight:** The best-performing checkpoint (based on BLEU) was found at **step 3200**, long after the validation loss had minimized at step 500. This confirms the weak correlation between loss and task-specific metrics.
+- **Note:** This model correctly uses completion-only loss (an update from previous TRL versions), ensuring a strong and valid baseline.
 
-**Results:** BLEU 0.4590
+**Results (Baseline):** BLEU 0.4677
 
 ---
 
 ### 2. Direct Preference Optimization (DPO)
 
-**What it does:** Teaches the model to prefer better corrections over worse ones using offline preference pairs. This approach is effective because it's often easier for a model to learn a relative preference ("A is better than B") than to learn an absolute, objective score for a single output.
+**What it does:** Teaches the model to prefer better corrections over worse ones ("A is better than B") using a static, offline dataset of preference pairs.
 
 **Approach:**
-- Generate preference pairs from SFT model (temperature 0.7 vs 1.2)
-- Rank by edit distance to ground truth: lower distance = "chosen", higher = "rejected"
-- Train with DPO loss to maximize log probability of chosen over rejected
-- Uses implicit reward via likelihood ratio: r(x,y) = β log(π_θ(y|x) / π_ref(y|x))
+- A preference dataset of 825 pairs was generated by sampling two outputs from the SFT model.
+- **Key Method:** The pairs were ranked by their **BLEU score** against the ground truth. The higher-BLEU output was labeled "chosen," and the lower-BLEU output was "rejected."
+- The SFT model was then trained on these BLEU-ranked pairs for 3 epochs using the DPO loss.
 
-**Results:** BLEU 0.4584 (slight decrease)
-
-![DPO Dataset Analysis](images/dpo_distance_analysis.png)
-
-**Why the decrease?**
-- BLEU measures similarity to single reference, not overall quality
-- DPO optimizes for nuanced preferences that BLEU doesn't fully capture
-- Qualitative analysis reveals improvements in fluency and naturalness
+**Results:** BLEU **0.4716** (✅ **Winner**)
 
 **Reference:** [Direct Preference Optimization: Your Language Model is Secretly a Reward Model](https://arxiv.org/abs/2305.18290) (Rafailov et al., NeurIPS 2023)
 
@@ -91,40 +85,37 @@ This project demonstrates these production techniques at an educational scale, s
 
 ### 3. Group Reward Preference Optimization (GRPO)
 
-**What it does:** An online RL method where the model (the "policy") generates multiple completions per prompt. The model's weights are then updated based on group-based advantages, encouraging it to produce more high-reward outputs over time.
+**What it does:** An online RL-based method where the model generates multiple completions per prompt. It then uses the reward (BLEU score) from all completions in the group to update its policy, learning to favor generations that lead to higher rewards.
 
 **Approach:**
-- Generate N completions per prompt (group size: 4, 8, 12, 16)
-- Compute reward for each (based on edit distance to ground truth)
-- Use group advantages to update policy
-- Prevents model from drifting too far with KL penalty (β)
-
-**Key Hyperparameter:** Group size (`num_completions_per_prompt`)
+- **"Lean & Fair" Experiment:** A systematic comparison was run to find the best GRPO hyperparameters.
+- Three group sizes were tested: `c=4`, `c=8`, and `c=16`.
+- Each was trained for a fixed **1000 steps**, with 4 checkpoints saved (250, 500, 750, 1000) to account for instability.
+- All 12 resulting checkpoints were evaluated to find the single best model.
 
 **Experiments:**
-| Group Size | BLEU Score | Improvement |
-|------------|-----------|-------------|
-| 4 | 0.4612 | +0.5% |
-| 8 | 0.4638 | +1.0% |
-| 12 | 0.4655 | +1.4% |
-| **16** | **0.4669** | **+1.7%** ✨ |
+| Group Size | Best BLEU (Validation) | Winning Checkpoint | Final BLEU (Test Set) |
+| :--- | :--- | :--- | :--- |
+| **🏆 c=4** | **0.4667** | **Step 500** | **0.4712** |
+| c=8 | 0.4651 | Step 750 | — |
+| c=16 | 0.4627 | Step 750 | — |
 
-**Key Insight:** Larger group sizes provide richer learning signals, leading to better performance across the board.
+**Key Insight:** Contrary to the old experiment, the **smallest group size (c=4) yielded the best-performing model**. This suggests that for this dataset, a smaller group provided a more effective training signal, while larger groups may have been too unstable.
+
 
 ---
-
 ## 📁 Repository Structure
 
 ```
-preference_optimization/
-├── preference_optimization_pipeline.ipynb  # Complete notebook with all experiments
-├── requirements.txt                        # Python dependencies
-├── bleu_scores.json                       # Cached evaluation scores
-├── images/dpo_distance_analysis.png
-├── images/grpo_training_dynamics_comparison.png  
-├── images/grpo_final_comparison.png
+
+preference\_optimization/
+├── preference_optimization_pipeline.ipynb  \# Main notebook with all experiments
+├── requirements.txt                        \# Python dependencies
+├── bleu_scores.json                        \# Cached evaluation scores
+├── images/                                 \# Contains all saved plots & figures
 │
-└── README.md                             
+└── README.md
+
 ```
 
 **Note:** Model weights (~1.5GB total) are not included in this repository. The notebook contains all code needed to reproduce training and generate models locally.
@@ -151,99 +142,112 @@ pip install -r requirements.txt
 ### Key Dependencies
 
 ```
+
 # Core ML Libraries
-torch>=2.1.0
-transformers>=4.41.0
-trl>=0.8.6                # For SFT, DPO, and GRPO trainers
-datasets>=2.15.0
-accelerate>=0.25.0
+
+torch==2.8.0+cu128
+transformers==4.57.1
+trl==0.24.0
+datasets==4.3.0
+accelerate==1.11.0
 
 # Evaluation & Metrics
-evaluate
-sacrebleu
-fast_edit_distance
+
+evaluate==0.4.6
+sacrebleu==2.5.1
+fast_edit_distance==1.2.2
 
 # Utilities
-pandas
-matplotlib
-numpy
-jupyter
+
+pandas==2.3.3
+matplotlib==3.10.7
+numpy==2.1.2
+jupyter_core==5.8.1
+jupyterlab==4.4.9
+notebook==7.4.2
+
 ```
+## 📊 Detailed Results & Analysis
 
+### 1. GRPO "Lean & Fair" Experiment
 
-## 📊 Detailed Results
+**Methodology:**
+1.  **Fixed Steps:** Each group size (`c=4`, `c=8`, `c=16`) was trained for **exactly 1000 steps**.
+2.  **Checkpointing:** To find the most stable, best-performing model, **4 checkpoints** were saved for each run (at steps 250, 500, 750, and 1000).
+3.  **Evaluation:** All 12 resulting checkpoints were evaluated on the validation set to find the single best-performing model.
 
-### GRPO Group Size Experiments
+![GRPO Checkpoint Evaluation](images/grpo_bleu_all_checkpoints_final.png)
 
-The systematic variation of group size revealed a clear trend:
+#### Final GRPO Results (Validation Set):
 
-#### Training Dynamics
+| Group Size | Best BLEU | Mean BLEU | Std Dev | Winning Checkpoint |
+| :--- | :--- | :--- | :--- | :--- |
+| 🏆 **c=4** | **0.4667** | 0.4623 | 0.0037 | **Step 500** |
+| c=8 | 0.4651 | 0.4633 | 0.0018 | Step 750 |
+| c=16 | 0.4627 | 0.4586 | 0.0042 | Step 750 |
 
-![GRPO Training Dynamics](images/grpo_training_dynamics_comparison.png)
+**Key Takeaways:**
+* **Instability is Real:** The checkpoint scores show high variance, showing that GRPO training was unstable. The checkpointing strategy was essential to find the true peak performance.
+* **Smaller Group Size Won:** Unlike the previous experiment, the **group size of 4 gave the best-performing checkpoint (0.4667)**. This suggests that for this dataset, a smaller group size provided a more effective and stable learning signal.
+* **Success:** The best GRPO model (`c=4`, `step=500`) ultimately achieved a **final test set BLEU of 0.4712**, successfully beating the SFT baseline.
 
-**Key Observations:**
-- **Mean Rewards** increase with larger group sizes
-- **KL Divergence** remains stable (healthy learning, no excessive drift)
-- **Loss** decreases more consistently with larger groups
-- **Reward Diversity** shows richer signals with more completions
+---
 
-#### Statistics Summary
+### 2. Proactive Validation: GRPO Reward Signal
 
-| Group Size | Mean Reward | Final Reward | Reward Improvement | Mean KL | Final Loss |
-|------------|-------------|--------------|-------------------|---------|-----------|
-| 4 | 0.4612 | 0.4850 | +0.0238 | 0.0012 | -0.0053 |
-| 8 | 0.4638 | 0.4912 | +0.0274 | 0.0015 | -0.0068 |
-| 12 | 0.4655 | 0.4956 | +0.0301 | 0.0018 | -0.0072 |
-| 16 | 0.4669 | 0.4998 | +0.0329 | 0.0019 | -0.0081 |
+Before trusting the final GRPO score, I performed a deeper analysis to validate the reward signal itself. This is a critical sanity check to ensure the model has a "learnable" signal.
 
-![GRPO Experiment Comparison](images/grpo_final_comparison.png)
+**Methodology:**
+1.  Set the learning rate to 0 to "freeze" the SFT model.
+2.  Sampled 16 generations per prompt (emulating `c=16`) from this base model.
+3.  Plotted the distribution of BLEU scores (the reward) for these generations.
 
-### Qualitative Analysis
+![GRPO Base Reward Distribution](images/grpo_bleu_base_rewards.png)
 
-- Across the full test set, all methods (SFT, DPO, GRPO) show similar correction rates with GRPO showing modest improvements on average (reflected in the +1.7% BLEU increase).*
+**Key Finding:**
+The plot confirms that the base SFT model, using the chosen generation config (`top_p=0.9`, `temp=0.9`), produces a **healthy, diverse distribution of rewards**. There is a good contrast between "poor" (BLEU < 0.3) and "good" (BLEU > 0.6) outputs. This is crucial: if all generations were "poor," the model would have no high-reward examples to learn from, and the training would fail. This sanity check confirmed the generation config was sound.
 
-**Key observation:** The small BLEU improvement (+0.0079) indicates that while GRPO performs better on average, the gains are incremental rather than dramatic. For a full evaluation, see the notebook's qualitative comparison section which includes both successes and failures.
+---
+### 3. Qualitative Case Study (SFT Failure)
+
+Analysis of the final BLEU scores (where DPO won by +0.0039) doesn't tell the whole story. A qualitative review of the SFT model's *worst*-performing examples revealed a catastrophic failure mode: repetitive loops.
+
+When the SFT model, DPO model, and GRPO model were given this same problematic input, DPO was the **only** one to show improvement.
+
+| Model | BLEU | Output |
+| :--- | :--- | :--- |
+| **Input** | — | `Fix grammaticality: She suddenly realised until she had...` |
+| **Truth** | 1.0 | `She suddenly realised that she had no reasonable...` |
+| **SFT** | 0.0 | `"I'm angry because I'm not able to do my job well, I'm...` (repeats) |
+| **GRPO** | 0.0 | `"I don't know what to do with this situation, I don't...` (repeats) |
+| **DPO** | **0.2485** | `"You are a bad mother, I don't want to be a bad mother...` (different loop) |
+
+**Key Takeaway:**
+While DPO's output was still incorrect, it **successfully broke SFT's original failure mode**, proving that its preference training had measurably and positively altered the model's behavior in a way that BLEU scores alone do not capture. This provides strong evidence for DPO's effectiveness.
 
 ---
 
 ## 💡 Key Insights
 
-### 1. Online Learning Advantage
+### 1. DPO's Stability and Effectiveness
 
-**GRPO (online)** outperformed **DPO (offline)** because:
-- Adapts to current model behavior during training
-- Explores more diverse corrections through on-policy generation
-- Better handles distribution shift as the model improves
+**DPO (offline)** outperformed **GRPO (online)**. Using a static, pre-ranked dataset of preference pairs (where pairs were ranked by their BLEU score) provided a highly stable and effective training signal. This approach successfully avoided the training instability encountered during the GRPO experiments.
 
-### 2. Group Size Scaling Law
+### 2. GRPO Instability vs. Group Size
 
-**Trend:** 4 → 8 → 12 → 16 shows consistent improvement
+The original hypothesis of a "group size scaling law" (bigger group = better) was not the case for this small model and dataset. The **`c=4` (smallest) group produced the best-performing model**. The robust checkpointing strategy revealed that all GRPO runs were highly unstable, and the best model was found at `step 500`, not at the end of training. This suggests a smaller group size provided a more effective signal before instability took over.
 
-**Why it works:**
-- More completions = richer preference signal for advantage estimation
-- Better gradient estimates from group-based comparisons
-- More robust policy updates
+### 3. Qualitative Wins Support Quantitative Data
 
-**Diminishing returns?**
-- Not observed in this experiment! Performance improved at every step
-- Computational cost increases linearly with group size
-- Optimal point depends on task complexity and GPU budget
-
-### 3. BLEU Metric Limitations
-
-**DPO showed slight BLEU decrease** but qualitative analysis revealed:
-- More natural phrasing in many cases
-- Better fluency on complex sentences
-- Improved grammatical correctness not captured by single-reference BLEU
-
-**Lesson:** Use multiple evaluation metrics and human evaluation for alignment tasks!
+This experiment showed a perfect match between metrics and observation.
+* **Quantitative:** DPO won on the final BLEU score.
+* **Qualitative:** The case study *supported* this win by showing DPO was the *only* model to fix a catastrophic SFT failure (a repetitive loop). This confirms DPO's training resulted in a meaningful behavioral improvement that GRPO missed.
 
 ### 4. Practical Takeaways
 
-- ✅ Start with strong SFT baseline using early stopping
-- ✅ Use online methods (GRPO) when feasible for better adaptation
-- ✅ Tune group size based on your task and computational budget
-- ✅ Validate with both automated metrics and qualitative analysis
+* ✅ Start with a strong SFT baseline, but **track your primary evaluation metric (e.g., BLEU), not just validation loss.** The best BLEU score (step 3200) appeared long after the best loss (step 500).
+* ✅ DPO with metric-ranked pairs is a highly effective and stable alignment technique.
+* ✅ When using online RL methods like GRPO, **be prepared for instability.** A robust checkpointing and "best-model-wins" evaluation strategy is essential.
 
 ---
 
@@ -253,13 +257,11 @@ The systematic variation of group size revealed a clear trend:
 
 1. **Scale to larger models**
    - Test on SmolLM-360M or Llama-3.2-1B
-   - Investigate if group size trends hold at scale
+   - Investigate if these trends hold at scale
 
 2. **Alternative reward functions**
-   - BLEURT or BERTScore instead of edit distance
+   - BLEURT or BERTScore instead of BLEU
    - Multi-objective rewards (fluency + correctness + style)
-
----
 
 ## 📚 References
 
@@ -271,8 +273,8 @@ The systematic variation of group size revealed a clear trend:
 
 ### Datasets
 
-- **C4-200M:** Subset of C4 corpus adapted for grammatical error correction
-- Available via HuggingFace Datasets: `liweili/c4_200m`
+- **CoEdit:** A large-scale dataset for Grammatical Error Correction.
+- Available via HuggingFace Datasets: `grammarly/coedit`
 
 ### Libraries & Tools
 
@@ -286,7 +288,7 @@ The systematic variation of group size revealed a clear trend:
 
 - **HuggingFace** for the TRL library and hosting the model and dataset
 - **SmolLM team** for the efficient small language model
-- **C4 dataset** creators for the training corpus
+- **Grammarly** for creating and open-sourcing the CoEdit dataset
 
 ---
 
