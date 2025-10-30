@@ -6,6 +6,9 @@ An educational exploration comparing preference optimization methods for grammat
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-ee4c2c.svg)](https://pytorch.org/)
 [![Transformers](https://img.shields.io/badge/🤗-Transformers-yellow.svg)](https://huggingface.co/transformers/)
 
+### ➡️ [**View Notebook with All Outputs (HTML)**](./preference_optimization_pipeline_WITH_OUTPUTS.html)
+*Note: The main notebook file (`.ipynb`) in this repository has its outputs cleared to allow GitHub to render. Please use the HTML link above to see the full analysis, plots, and logs.*
+
 ---
 
 ## 🎯 Overview
