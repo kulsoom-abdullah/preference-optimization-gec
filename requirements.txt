@@ -1,17 +1,21 @@
-# Core ML Libraries
-torch>=2.1.0
-transformers>=4.41.0
-trl>=0.8.6
-datasets>=2.15.0
-accelerate>=0.25.0
-
-# Evaluation & Metrics
-evaluate
-sacrebleu
-fast_edit_distance
-
-# Utilities
-pandas
-matplotlib
-numpy
-jupyter
+accelerate==1.11.0
+bitsandbytes==0.48.2
+datasets==4.4.0
+einops==0.8.1
+evaluate==0.4.6
+fast_edit_distance==1.2.2
+flash_attn==2.8.3
+ipywidgets==8.1.7
+jupyterlab==4.4.9
+language-tool-python==2.9.5
+matplotlib==3.10.7
+notebook==7.4.2
+numpy==2.1.2
+pandas==2.3.3
+sacrebleu==2.5.1
+scikit-learn==1.7.2
+sentence-transformers==5.1.2
+torch==2.8.0+cu128
+tqdm==4.67.1
+transformers==4.57.1
+trl==0.24.0
