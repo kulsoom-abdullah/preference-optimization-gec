@@ -62,30 +62,31 @@ My second experiment, GRPO, tested a completely different, "online" approach. Th
     2.  **Grade** all 5 "live" candidates with my `CombinedRewardGrader`.
     3.  **Learn** from this ranked list.
 * **Sanity Check:** Before training, I ran a sanity check and confirmed that my grader produced a wide, learnable distribution of scores (not just a single spike), which is essential for this method.
-* **Result:** *(This is where you'll put your final analysis, e.g., "GRPO successfully improved the BLEU score to 0.XXXX and, most importantly, fixed 3 of the 10 worst repetitive loop failures.")*
-
+* **Result:** The "online" GRPO experiment was a success. It achieved the highest BLEU score (**0.4942**, a +0.18% gain over SFT) and, most importantly, the qualitative analysis proved it **fixed the SFT model's catastrophic repetitive loop failures** (e.g., in examples 334 and 337) where DPO had no effect.
 ---
 
 ## 📊 Key Plots
 
-**1. SFT Training Dynamics (Finding the 0.4934 Baseline)**
-<p align="center">
-<img src="./images/loss_vs_bleu_analysis_run1.png" width="400" />
-  <img src="./images/loss_vs_bleu_analysis_run2.png" width="400" />
-</p>
-*Analysis: The SFT baseline was trained, interrupted, and resumed with a lower learning rate, leading to the final 0.4934 BLEU score.*
-
-**2. DPO Reward Margin (The *Finding* from the Failed Experiment)**
-<p align="center">
-  <img src="./images/dpo_reward_margin_histogram_v2.png" width="400" />
-</p>
-*Analysis: This histogram proved the DPO dataset was flawed. The median reward margin (the "signal") was a tiny 0.019, and the SFT model was preferred 56% of the time.*
-
-**3. GRPO Sanity Check (Validating the "Online" Approach)**
-<p align="center">
-  <img src="./images/grpo_smart_reward_sanity_check.png" width="400" />
-</IMG>
-*Analysis: This check confirmed the "online" approach was valid. Generating 5 diverse samples produced a wide, learnable distribution of "smart" scores for the GRPO trainer to learn from.*
+<table align="center" style="border:none;">
+  <tr style="border:none;">
+    <td align="center" style="border:none;">
+      <b>1. SFT Baseline (0.4934 BLEU)</b><br>
+      <img src="./images/loss_vs_bleu_analysis_run1.png" width="300" />
+      <img src="./images/loss_vs_bleu_analysis_run2.png" width="300" />
+      <br><i>Analysis: SFT Run 1 (top) was interrupted. Run 2 (bottom) was resumed, leading to the final 0.4934 BLEU score.</i>
+    </td>
+    <td align="center" style="border:none;">
+      <b>2. DPO Experiment (The Finding)</b><br>
+      <img src="./images/dpo_reward_margin_histogram_v2.png" width="300" />
+      <br><i>Analysis: Proved DPO would fail. The "smart" grader preferred the SFT model 56% of the time.</i>
+    </td>
+    <td align="center" style="border:none;">
+      <b>3. GRPO Sanity Check (The Solution)</b><br>
+      <img src="./images/grpo_smart_reward_sanity_check.png" width="300" />
+      <br><i>Analysis: Confirmed the "online" GRPO method had a wide, learnable reward signal.</i>
+    </td>
+  </tr>
+</table>
 
 ---
 
@@ -95,19 +96,19 @@ My second experiment, GRPO, tested a completely different, "online" approach. Th
 
 .
 ├── models/
-│   ├── sft\_final\_v2\_resumed/     \# Final 0.4934 BLEU SFT model
-│   ├── dpo\_smart\_model\_v2/       \# Failed DPO model
-│   └── grpo\_smart\_online\_model/  \# Final GRPO model
+│   ├── sft_final_v2_resumed/     # Final 0.4934 BLEU SFT model
+│   ├── dpo_smart_model_v2/       # Failed DPO model
+│   └── grpo_smart_online_model/  # Final GRPO model
 ├── analysis/
-│   ├── dpo\_smart\_dataset\_v2.csv  \# The flawed DPO dataset
+│   ├── dpo_smart_dataset_v2.csv  # The flawed DPO dataset
 │   └── (other analysis files)
 ├── images/
 │   ├── (all .png plots)
-├── preference\_optimization\_pipeline.ipynb  \# The main notebook
-├── preference\_optimization\_pipeline\_WITH\_OUTPUTS.html \# Full notebook with logs
-└── README.md                       \# You are here
+├── preference_optimization_pipeline.ipynb  # The main notebook
+├── preference_optimization_pipeline_WITH_OUTPUTS.html # Full notebook with logs
+└── README.md                       # You are here
 
-````
+```
 
 ---
 
